@@ -6,7 +6,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Discord.Addons.Interactive" Version="2.0.0" />
       <PackageReference Include="Discord.Net" Version="2.2.0" />
+      <PackageReference Include="Discord.Net.Commands" Version="2.2.0" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.0-rc.2.20475.5" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0-rc.2.20475.5" />
+      <PackageReference Include="StructureMap.Microsoft.DependencyInjection" Version="2.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MetalBotDAL\MetalBotDAL.csproj" />
     </ItemGroup>
 
 </Project>

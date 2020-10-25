@@ -2,6 +2,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetalBot", "MetalBot\MetalBot.csproj", "{02C5D615-F3A5-47B3-8F9C-8CF5B73EE6CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RedditPollingService", "RedditPollingService\RedditPollingService.csproj", "{48048E0A-329C-4B82-954B-CC235295F887}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MutualClasses", "MutualClasses\MutualClasses.csproj", "{088CEF8D-F40F-4BA2-B1E9-0AA3B2353172}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetalBotDAL", "MetalBotDAL\MetalBotDAL.csproj", "{4C41624B-1BB1-45DA-91F7-7DDF241CCF9D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +18,17 @@ Global
 		{02C5D615-F3A5-47B3-8F9C-8CF5B73EE6CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02C5D615-F3A5-47B3-8F9C-8CF5B73EE6CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{02C5D615-F3A5-47B3-8F9C-8CF5B73EE6CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48048E0A-329C-4B82-954B-CC235295F887}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48048E0A-329C-4B82-954B-CC235295F887}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48048E0A-329C-4B82-954B-CC235295F887}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48048E0A-329C-4B82-954B-CC235295F887}.Release|Any CPU.Build.0 = Release|Any CPU
+		{088CEF8D-F40F-4BA2-B1E9-0AA3B2353172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{088CEF8D-F40F-4BA2-B1E9-0AA3B2353172}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{088CEF8D-F40F-4BA2-B1E9-0AA3B2353172}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{088CEF8D-F40F-4BA2-B1E9-0AA3B2353172}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C41624B-1BB1-45DA-91F7-7DDF241CCF9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C41624B-1BB1-45DA-91F7-7DDF241CCF9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C41624B-1BB1-45DA-91F7-7DDF241CCF9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C41624B-1BB1-45DA-91F7-7DDF241CCF9D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

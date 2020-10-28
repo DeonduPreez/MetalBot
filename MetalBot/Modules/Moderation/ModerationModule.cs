@@ -50,11 +50,15 @@ namespace MetalBot.Modules.Moderation
         [Command("purge")]
         [RequireUserPermission(GuildPermission.ManageMessages)]
         [RequireContext(ContextType.Guild)]
-        public async Task Purge(int amount)
+        public async Task Purge(int amount, bool includePinned = false)
         {
             try
             {
-                var enumerable = (await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync()).Where(m => !m.IsPinned);
+                var enumerable = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
+                if (!includePinned)
+                {
+                    enumerable = enumerable.Where(m => !m.IsPinned);
+                }
                 var messages = enumerable as IMessage[] ?? enumerable.ToArray();
                 await ((SocketTextChannel) Context.Channel).DeleteMessagesAsync(messages);
             }
@@ -68,7 +72,7 @@ namespace MetalBot.Modules.Moderation
         [Command("ban")]
         [RequireUserPermission(GuildPermission.BanMembers)]
         [RequireContext(ContextType.Guild)]
-        public async Task Mute(SocketGuildUser user, string reason = null)
+        public async Task Ban(SocketGuildUser user, string reason = null)
         {
             try
             {
@@ -85,7 +89,7 @@ namespace MetalBot.Modules.Moderation
         [Alias("banlist", "bans")]
         [RequireUserPermission(GuildPermission.BanMembers)]
         [RequireContext(ContextType.Guild)]
-        public async Task Mute()
+        public async Task ShowBans()
         {
             try
             {
@@ -120,6 +124,7 @@ namespace MetalBot.Modules.Moderation
         [RequireContext(ContextType.Guild)]
         public async Task Mute(SocketGuildUser user = null)
         {
+            await ReplyAsync("This command has not been implemented");
             // TODO : Set up roles on startup foreach guild
             // TODO : Set up muted role on discord guild in database
             // TODO : Edit setup to accommodate for muted role

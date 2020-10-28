@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -16,12 +17,11 @@ namespace MetalBot.Services
 {
     public class CommandHandler
     {
-        private const char Prefix = '!';
-
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
         private readonly LoggingService _loggingService;
         private readonly IServiceProvider _services;
+        private readonly HandleMessageQueue _handleMessageQueue;
 
         public static SocketRole _tarkoofRole;
 
@@ -31,6 +31,7 @@ namespace MetalBot.Services
             _commands = services.GetRequiredService<CommandService>();
             _client = services.GetRequiredService<DiscordSocketClient>();
             _loggingService = services.GetRequiredService<LoggingService>();
+            _handleMessageQueue = services.GetRequiredService<HandleMessageQueue>();
             _services = services;
         }
 
@@ -38,10 +39,7 @@ namespace MetalBot.Services
         {
             // Hook the MessageReceived event into our command handler
             _client.Ready += ClientOnReady;
-            _client.MessageReceived += HandleCommandAsync;
-            _client.MessageUpdated += HandleMessageUpdatedAsync;
-            _client.MessageDeleted += HandleMessageDeletedAsync;
-            _client.MessagesBulkDeleted += HandleMessageBulkDeletedAsync;
+            _client.MessageReceived += HandleMessageReceivedAsync;
             _client.UserJoined += UserJoined;
 
             // Here we discover all of the command modules in the entry 
@@ -111,7 +109,7 @@ namespace MetalBot.Services
             await user.Guild.SystemChannel.SendMessageAsync($"{user.Mention} Sup bitch, go to {rulesChannel.Mention} then go to {rolesChannel.Mention} to get set up");
         }
 
-        private async Task HandleCommandAsync(SocketMessage arg)
+        private async Task HandleMessageReceivedAsync(SocketMessage arg)
         {
             // Bail out if it's a System Message.
             if (!(arg is SocketUserMessage msg))
@@ -125,40 +123,9 @@ namespace MetalBot.Services
                 return;
             }
 
-            // Create a number to track where the prefix ends and the command begins
-            var pos = 0;
-            // Replace the '!' with whatever character
-            // you want to prefix your commands with.
-            // Uncomment the second half if you also want
-            // commands to be invoked by mentioning the bot instead.
-            if (!msg.HasCharPrefix(Prefix, ref pos) && !msg.HasMentionPrefix(_client.CurrentUser, ref pos))
-            {
-                return;
-            }
+            _handleMessageQueue.EnqueueMessage(msg);
 
-            // Create a Command Context.
-            var context = new SocketCommandContext(_client, msg);
-
-            // Execute the command. (result does not indicate a return value, 
-            // rather an object stating if the command executed successfully).
-            var result = await _commands.ExecuteAsync(context, pos, _services);
-
-            // Uncomment the following lines if you want the bot
-            // to send a message if it failed.
-            // This does not catch errors from commands with 'RunMode.Async',
-            // subscribe a handler for '_commands.CommandExecuted' to see those.
-            if (!result.IsSuccess)
-            {
-                if (result.Error != CommandError.UnknownCommand)
-                {
-                    await msg.Channel.SendMessageAsync(result.ErrorReason);
-                }
-
-                _loggingService.Error($"Error executing command: {result.ErrorReason}");
-            }
-
-            var content = msg.Content;
-            _loggingService.Debug($"Received message: {content}");
+            _loggingService.Debug($"Enqueued message: {msg.Content}");
         }
 
         private async Task HandleMessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
@@ -171,6 +138,7 @@ namespace MetalBot.Services
         private async Task HandleMessageDeletedAsync(Cacheable<IMessage, ulong> before, ISocketMessageChannel channel)
         {
             var message = await before.GetOrDownloadAsync();
+            _handleMessageQueue.DequeueMessage(message.Id);
             _loggingService.Info($"Message deleted: {message}");
         }
 
@@ -239,7 +207,12 @@ namespace MetalBot.Services
                     dbGuild.DefaultChannel = socketGuild.DefaultChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.DefaultChannel.Id);
                     dbGuild.EmbedChannel = socketGuild.EmbedChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.EmbedChannel.Id);
                     dbGuild.SystemChannel = socketGuild.SystemChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.SystemChannel.Id);
-                    dbGuild.Owner = dbContext.DiscordUsers.First(du => du.IdExternal == (long) socketGuild.Owner.Id);
+                    if (socketGuild.Owner != null)
+                    {
+                        // Fuck knows why socketGuild.Owner is null
+                        dbGuild.Owner = dbContext.DiscordUsers.First(du => du.IdExternal == (long) socketGuild.Owner.Id);
+                    }
+
                     dbGuild.DiscordUsers = guildUsers;
 
                     dbContext.DiscordGuilds.Update(dbGuild);

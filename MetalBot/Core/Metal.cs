@@ -5,6 +5,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using MetalBot.Exceptions.Startup;
+using MetalBot.Helpers;
 using MetalBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,6 +31,7 @@ namespace MetalBot.Core
                 .AddSingleton(GetDiscordCommandsService())
                 .AddSingleton(GetLoggingService())
                 .AddSingleton<InteractiveService>()
+                .AddSingleton<HandleMessageQueue>()
                 .BuildServiceProvider();
         }
 
@@ -89,18 +91,6 @@ namespace MetalBot.Core
             Environment.Exit(0);
         }
 
-        public void Initialize(IServiceProvider provider)
-        {
-            var commandService = provider.GetRequiredService<CommandService>();
-            var logger = provider.GetRequiredService<LoggingService>();
-
-            // TODO : Register modules like below maybe
-            // var loaded = commandService.AddModules(GetType().Assembly, null, module => { module.WithRunMode(RunMode.Sequential); });
-            // $"Loaded {loaded.Count} modules and {loaded.Sum(m => m.Commands.Count)} commands in {sw.ElapsedMilliseconds}ms.");
-            // TODO : Register event handlers like below maybe
-            // _client.RegisterEventHandlers(provider);
-        }
-
         private Task ClientReady()
         {
             Console.WriteLine("Bot is connected!");
@@ -113,6 +103,7 @@ namespace MetalBot.Core
             {
                 // How much logging do you want to see?
                 LogLevel = LogSeverity.Info,
+                ExclusiveBulkDelete = true
 
                 // If you or another service needs to do anything with messages
                 // (eg. checking Reactions, checking the content of edited/deleted messages),

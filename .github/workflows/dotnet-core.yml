@@ -23,17 +23,27 @@ jobs:
       run: dotnet build --configuration Release --no-restore
     - name: Test
       run: dotnet test --no-restore --verbosity normal
-    - name: Publish
+    - name: Publish Windows
       run: dotnet publish -c Release -r win10-x64
     - name: Upload MetalBot Windows Build Artifact
       uses: actions/upload-artifact@v2
       with:
           name: MetalBot-Windows
-          path: ./MetalBot/bin/Release/netcoreapp3.1/
-    - name: Publish
+          path: ./MetalBot/bin/Release/netcoreapp3.1/win10-x64/
+    - name: Publish Linux
       run: dotnet publish -c Release -r linux-x64
     - name: Upload MetalBot Linux Build Artifact
       uses: actions/upload-artifact@v2
       with:
         name: MetalBot-Linux
-        path: ./MetalBot/bin/Release/netcoreapp3.1/
+        path: ./MetalBot/bin/Release/netcoreapp3.1/linux-x64/
+      
+    - name: Release Creation
+      uses: actions/create-release@v1.1.4
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: true
+      
+

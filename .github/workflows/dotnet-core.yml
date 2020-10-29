@@ -31,9 +31,9 @@ jobs:
           name: MetalBot-Windows
           path: ./MetalBot/bin/Release/netcoreapp3.1/
     - name: Publish
-        run: dotnet publish -c Release -r ubuntu-20.04-x64
+      run: dotnet publish -c Release -r ubuntu-20.04-x64
     - name: Upload MetalBot Linux Build Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: MetalBot-Windows
-          path: ./MetalBot/bin/Release/netcoreapp3.1/
+      uses: actions/upload-artifact@v2
+      with:
+        name: MetalBot-Windows
+        path: ./MetalBot/bin/Release/netcoreapp3.1/

@@ -35,5 +35,5 @@ jobs:
     - name: Upload MetalBot Linux Build Artifact
       uses: actions/upload-artifact@v2
       with:
-        name: MetalBot-Windows
+        name: MetalBot-Linux
         path: ./MetalBot/bin/Release/netcoreapp3.1/

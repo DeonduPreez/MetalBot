@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using MetalBotDAL;
 
 namespace MetalBot.Modules.General
 {
@@ -52,14 +53,23 @@ namespace MetalBot.Modules.General
         {
             try
             {
-                var commands = _commandService.Commands.ToList();
                 var embedBuilder = new EmbedBuilder();
+                // TODO : Embed and pin message in roles channel stating all available roles (update whenever new roles are added)
+                // TODO : Add roles that give access to certain channels(with specific permissions) to users
+                // await using var dbContext = new MetalBotContext();
+                // if (await IsRolesChannel(dbContext))
+                // {
+                //     var availableRoles = dbContext
+                //     return;
+                // }
+
+                var commands = _commandService.Commands.ToList();
 
                 foreach (var command in commands)
                 {
-                    var pc = await command.CheckPreconditionsAsync(Context);
+                    var preCon = await command.CheckPreconditionsAsync(Context);
 
-                    if (!pc.IsSuccess)
+                    if (!preCon.IsSuccess)
                     {
                         continue;
                     }
@@ -82,7 +92,20 @@ namespace MetalBot.Modules.General
         [Command("say")]
         [Summary("Echoes a message.")]
         [RequireContext(ContextType.Guild)]
-        public async Task SayAsync([Remainder] [Summary("The text to echo")]
-            string echo) => await ReplyAsync(echo);
+        public async Task SayAsync([Remainder] [Summary("The text to echo")] string echo)
+        {
+            await ReplyAsync(echo);
+        }
+
+        private async Task<bool> IsRolesChannel(MetalBotContext metalBotContext)
+        {
+            var currentDbGuild = await metalBotContext.DiscordGuilds.FindAsync(Context.Guild.Id);
+            if (currentDbGuild.RulesChannel == null)
+            {
+                return false;
+            }
+
+            return Context.Channel.Id == (ulong) currentDbGuild.RulesChannel.IdExternal;
+        }
     }
 }

@@ -24,10 +24,16 @@ jobs:
     - name: Test
       run: dotnet test --no-restore --verbosity normal
     - name: Publish
-      run: dotnet publish
-    - name: Upload MetalBot Build Artifact
+      run: dotnet publish -c Release -r win10-x64
+    - name: Upload MetalBot Windows Build Artifact
       uses: actions/upload-artifact@v2
       with:
-          name: MetalBot
+          name: MetalBot-Windows
           path: ./MetalBot/bin/Release/netcoreapp3.1/
-    
+    - name: Publish
+        run: dotnet publish -c Release -r ubuntu-20.04-x64
+    - name: Upload MetalBot Linux Build Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: MetalBot-Windows
+          path: ./MetalBot/bin/Release/netcoreapp3.1/

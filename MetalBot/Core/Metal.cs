@@ -77,11 +77,11 @@ namespace MetalBot.Core
             catch (TaskCanceledException) //this exception always occurs when CancellationTokenSource#Cancel() is called; so we put the shutdown logic inside the catch block
             {
                 logger.Critical("Bot shutdown requested; shutting down and cleaning up.");
-                await ShutdownAsync(_client, _provider);
+                await ShutdownAsync(_provider);
             }
         }
 
-        public static async Task ShutdownAsync(DiscordSocketClient client, IServiceProvider provider)
+        public static Task ShutdownAsync(IServiceProvider provider)
         {
             foreach (var disposable in provider.GetServices<IDisposable>())
             {
@@ -89,6 +89,7 @@ namespace MetalBot.Core
             }
 
             Environment.Exit(0);
+            return Task.CompletedTask;
         }
 
         private Task ClientReady()

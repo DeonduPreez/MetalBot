@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.Rest;
 using Discord.WebSocket;
+using MetalBot.Helpers.Interactive;
 using MetalBot.Services;
 using MetalBotDAL;
 using MetalBotDAL.Entities.Discord;
@@ -15,12 +17,10 @@ namespace MetalBot.Modules.Moderation
 {
     public class ModerationModule : InteractiveBase
     {
-        private readonly CommandService _commandService;
         private readonly LoggingService _loggingService;
 
-        public ModerationModule(CommandService commandService, LoggingService loggingService)
+        public ModerationModule(LoggingService loggingService)
         {
-            _commandService = commandService;
             _loggingService = loggingService;
         }
 
@@ -59,6 +59,7 @@ namespace MetalBot.Modules.Moderation
                 {
                     enumerable = enumerable.Where(m => !m.IsPinned);
                 }
+
                 var messages = enumerable as IMessage[] ?? enumerable.ToArray();
                 await ((SocketTextChannel) Context.Channel).DeleteMessagesAsync(messages);
             }
@@ -129,13 +130,13 @@ namespace MetalBot.Modules.Moderation
             // TODO : Set up muted role on discord guild in database
             // TODO : Edit setup to accommodate for muted role
             user ??= (SocketGuildUser) Context.User;
-            
+
             // user.
         }
 
         [Command("setup", RunMode = RunMode.Async)]
         [Summary("Sets up the database with data from this server, e.g. roles channel, etc")]
-        [RequireOwner]
+        [RequireUserPermission(GuildPermission.Administrator)]
         [RequireContext(ContextType.Guild)]
         public async Task SetupGuild()
         {
@@ -147,28 +148,29 @@ namespace MetalBot.Modules.Moderation
             var adminChannel = await GetMentionedChannel("Admin", messages);
             if (adminChannel == null)
             {
-                return;
+                adminChannel = await HandleNoChannelExists("Admin", messages);
+                if (adminChannel != null)
+                {
+                    var everyone = Context.Guild.EveryoneRole;
+                    await adminChannel.AddPermissionOverwriteAsync(everyone, OverwritePermissions.DenyAll(adminChannel));
+                }
             }
 
-            var rolesChannel = await GetMentionedChannel("Roles", messages);
-            if (rolesChannel == null)
-            {
-                return;
-            }
-
-            var rulesChannel = await GetMentionedChannel("Rules", messages);
-            if (rulesChannel == null)
-            {
-                return;
-            }
+            var rolesChannel = await GetMentionedChannel("Roles", messages) ?? await HandleNoChannelExists("Roles", messages);
+            var rulesChannel = await GetMentionedChannel("Rules", messages) ?? await HandleNoChannelExists("Rules", messages);
 
             try
             {
                 await using var dbContext = new MetalBotContext();
                 var discordGuild = await dbContext.DiscordGuilds.AsQueryable().FirstAsync();
-                discordGuild.AdminChannel = new DiscordChannel(adminChannel);
-                discordGuild.RolesChannel = new DiscordChannel(rolesChannel);
-                discordGuild.RulesChannel = new DiscordChannel(rulesChannel);
+                discordGuild.AdminChannel = adminChannel == null ? discordGuild.AdminChannel : new DiscordChannel(adminChannel);
+                discordGuild.RolesChannel = rolesChannel == null ? discordGuild.RolesChannel : new DiscordChannel(rolesChannel);
+                discordGuild.RulesChannel = rulesChannel == null ? discordGuild.RulesChannel : new DiscordChannel(rulesChannel);
+                if (discordGuild.Owner == null || discordGuild.Owner.IdExternal != (long) Context.Guild.OwnerId)
+                {
+                    discordGuild.Owner = dbContext.DiscordUsers.First(du => du.IdExternal == (long) Context.Guild.OwnerId);
+                }
+
                 dbContext.DiscordGuilds.Update(discordGuild);
                 await dbContext.SaveChangesAsync();
             }
@@ -184,26 +186,30 @@ namespace MetalBot.Modules.Moderation
                 await ((SocketTextChannel) Context.Channel).DeleteMessagesAsync(messages);
             }
 
-            await ReplyAsync($"Server set up successfully");
+            await ReplyAndDeleteAsync($"Server set up successfully");
         }
 
-        private async Task<SocketTextChannel> GetMentionedChannel(string channelName, List<IUserMessage> socketMessages)
+        private async Task<IGuildChannel> GetMentionedChannel(string channelName, List<IUserMessage> socketMessages)
         {
-            var message = $"Please tag the {channelName} channel";
-            var response = await GetNextMessageAsync(message, socketMessages);
-            var channel = response?.MentionedChannels.FirstOrDefault() as SocketTextChannel;
-            var failCount = 1;
-            var channelIsNull = channel == null;
+            var message = $"Please tag the {channelName} channel, replying \"null\" implies no channel exists";
+            var failCount = 0;
+            SocketTextChannel channel = null;
+            var channelIsNull = true;
             while (channelIsNull)
             {
                 if (failCount == 5)
                 {
-                    await ReplyAsync("You dumb cunt, you fucked up 5 times. Restart the !setup process");
+                    await ReplyAsync("Good job, you fucked up 5 times. Restart the !setup process");
                     return null;
                 }
 
                 failCount++;
-                response = await GetNextMessageAsync(message, socketMessages);
+                var response = await GetNextMessageAsync(message, socketMessages);
+                if (response.Content.ToLower() == "null")
+                {
+                    return null;
+                }
+
                 channel = response.MentionedChannels.FirstOrDefault() as SocketTextChannel;
                 channelIsNull = channel == null;
             }
@@ -226,6 +232,27 @@ namespace MetalBot.Modules.Moderation
             }
 
             return response;
+        }
+
+        private async Task<IGuildChannel> HandleNoChannelExists(string channelName, List<IUserMessage> socketMessages)
+        {
+            socketMessages.Add(await ReplyAsync($"Would you like to create the {channelName} channel?"));
+            var response = await NextMessageAsync();
+            socketMessages.Add((IUserMessage) response);
+            if (ResponseHelper.IsYesResponse(response.Content))
+            {
+                return await CreateTextChannel(channelName, socketMessages);
+            }
+
+            socketMessages.Add(await ReplyAsync($"No {channelName} channel will be set up"));
+            return null;
+        }
+
+        private async Task<RestTextChannel> CreateTextChannel(string channelName, List<IUserMessage> socketMessages)
+        {
+            var channel = await Context.Guild.CreateTextChannelAsync(channelName);
+            socketMessages.Add(await ReplyAsync($"{channel.Mention} created"));
+            return channel;
         }
     }
 }

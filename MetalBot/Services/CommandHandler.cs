@@ -185,10 +185,9 @@ namespace MetalBot.Services
                     dbGuild.DefaultChannel = socketGuild.DefaultChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.DefaultChannel.Id);
                     dbGuild.EmbedChannel = socketGuild.EmbedChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.EmbedChannel.Id);
                     dbGuild.SystemChannel = socketGuild.SystemChannel == null ? null : guildChannels.First(dc => dc.IdExternal == (long) socketGuild.SystemChannel.Id);
-                    if (socketGuild.Owner != null)
+                    if (socketGuild.OwnerId > 0)
                     {
-                        // Fuck knows why socketGuild.Owner is null
-                        dbGuild.Owner = dbContext.DiscordUsers.First(du => du.IdExternal == (long) socketGuild.Owner.Id);
+                        dbGuild.Owner = dbContext.DiscordUsers.First(du => du.IdExternal == (long) socketGuild.OwnerId);
                     }
 
                     dbGuild.DiscordUsers = guildUsers;
@@ -214,7 +213,8 @@ namespace MetalBot.Services
         private async Task CreateOrUpdateGuildChannels(MetalBotContext dbContext, SocketGuild socketGuild)
         {
             var socketChannels = socketGuild.Channels.ToList();
-            var dbChannels = await dbContext.DiscordChannels.AsQueryable().Where(dc => dc.DiscordGuild.IdExternal == (long) socketGuild.Id).ToListAsync();
+            var dbChannels = await dbContext.DiscordChannels.AsQueryable()
+                .Where(dc => socketChannels.Select(sc => (long) sc.Id).Contains(dc.IdExternal)).ToListAsync();
 
             for (var i = dbChannels.Count - 1; i >= 0; i--)
             {
@@ -249,7 +249,8 @@ namespace MetalBot.Services
         private async Task CreateOrUpdateGuildUsers(MetalBotContext dbContext, SocketGuild socketGuild)
         {
             var socketUsers = socketGuild.Users.ToList();
-            var dbUsers = await dbContext.DiscordUsers.AsQueryable().Where(du => du.DiscordGuilds.Select(dg => dg.IdExternal).Contains((long) socketGuild.Id)).ToListAsync();
+            var dbUsers = await dbContext.DiscordUsers.AsQueryable()
+                .Where(du => socketUsers.Select(su => (long) su.Id).Contains(du.IdExternal)).ToListAsync();
 
             for (var i = dbUsers.Count - 1; i >= 0; i--)
             {

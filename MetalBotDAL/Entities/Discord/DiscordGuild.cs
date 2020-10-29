@@ -18,11 +18,11 @@ namespace MetalBotDAL.Entities.Discord
             DefaultChannel = socketGuild.DefaultChannel == null ? null : discordChannels.FirstOrDefault(dc => dc.IdExternal == (long) socketGuild.DefaultChannel.Id);
             EmbedChannel = socketGuild.EmbedChannel == null ? null : discordChannels.FirstOrDefault(dc => dc.IdExternal == (long) socketGuild.EmbedChannel.Id);
             SystemChannel = socketGuild.SystemChannel == null ? null : discordChannels.FirstOrDefault(dc => dc.IdExternal == (long) socketGuild.SystemChannel.Id);
-            if (socketGuild.Owner != null)
+            if (socketGuild.OwnerId > 0)
             {
-                // Fuck knows why socketGuild.Owner is null
-                Owner = discordUsers.First(du => du.IdExternal == (long) socketGuild.Owner.Id);                
+                Owner = discordUsers.First(du => du.IdExternal == (long) socketGuild.OwnerId);
             }
+
             DiscordUsers = discordUsers;
             DiscordChannels = discordChannels;
         }

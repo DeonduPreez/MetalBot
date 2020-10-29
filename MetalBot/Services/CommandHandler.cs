@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -109,23 +107,23 @@ namespace MetalBot.Services
             await user.Guild.SystemChannel.SendMessageAsync($"{user.Mention} Sup bitch, go to {rulesChannel.Mention} then go to {rolesChannel.Mention} to get set up");
         }
 
-        private async Task HandleMessageReceivedAsync(SocketMessage arg)
+        private Task HandleMessageReceivedAsync(SocketMessage arg)
         {
             // Bail out if it's a System Message.
             if (!(arg is SocketUserMessage msg))
             {
-                return;
+                return Task.CompletedTask;
             }
 
             // We don't want the bot to respond to itself or other bots.
             if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             _handleMessageQueue.EnqueueMessage(msg);
 
-            _loggingService.Debug($"Enqueued message: {msg.Content}");
+            return Task.CompletedTask;
         }
 
         private async Task HandleMessageUpdatedAsync(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
@@ -133,26 +131,6 @@ namespace MetalBot.Services
             // If the message was not in the cache, downloading it will result in getting a copy of `after`.
             var message = await before.GetOrDownloadAsync();
             _loggingService.Info($"Message updated: {message} -> {after}");
-        }
-
-        private async Task HandleMessageDeletedAsync(Cacheable<IMessage, ulong> before, ISocketMessageChannel channel)
-        {
-            var message = await before.GetOrDownloadAsync();
-            _handleMessageQueue.DequeueMessage(message.Id);
-            _loggingService.Info($"Message deleted: {message}");
-        }
-
-        private async Task HandleMessageBulkDeletedAsync(IReadOnlyCollection<Cacheable<IMessage, ulong>> before, ISocketMessageChannel channel)
-        {
-            _loggingService.Info("-------------------------------------------------------");
-            _loggingService.Info($"Message bulk deleted:");
-            foreach (var beforeMessage in before)
-            {
-                var message = await beforeMessage.GetOrDownloadAsync();
-                _loggingService.Info($"Message: {message.Content}");
-            }
-
-            _loggingService.Info("-------------------------------------------------------");
         }
 
         // private async Task HandleCommandAsync(SocketMessage messageParam)

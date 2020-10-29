@@ -1,20 +1,23 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using Discord.Commands;
 using Discord.WebSocket;
 using MetalBot.Services;
 
 namespace MetalBot.Helpers
 {
-    public class HandleMessageQueue
+    public class HandleMessageQueue : IDisposable
     {
         private const char Prefix = '!';
+        private const int WorkerCount = 5;
 
-        private readonly BackgroundWorker _backgroundWorker = new BackgroundWorker();
-        private readonly ConcurrentDictionary<ulong, SocketUserMessage> _concurrentDictionary = new ConcurrentDictionary<ulong, SocketUserMessage>();
+        private readonly List<BackgroundWorker> _backgroundWorkers = new List<BackgroundWorker>();
+        private readonly ConcurrentQueue<SocketUserMessage> _concurrentDictionary = new ConcurrentQueue<SocketUserMessage>();
+        private readonly object _mutex = new object();
+        private bool _running;
 
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
@@ -23,33 +26,38 @@ namespace MetalBot.Helpers
 
         public HandleMessageQueue(DiscordSocketClient client, CommandService commands, IServiceProvider services, LoggingService loggingService)
         {
+            _running = true;
             _client = client;
             _commands = commands;
             _services = services;
             _loggingService = loggingService;
-            _backgroundWorker.DoWork += HandleMessage;
-            _backgroundWorker.RunWorkerAsync();
+            for (var i = 0; i < WorkerCount; i++)
+            {
+                var backgroundWorker = new BackgroundWorker();
+                backgroundWorker.DoWork += HandleMessage;
+                backgroundWorker.RunWorkerAsync();
+                _backgroundWorkers.Add(backgroundWorker);
+            }
         }
 
         private async void HandleMessage(object sender, DoWorkEventArgs e)
         {
-            while (true)
+            while (_running)
             {
                 if (_concurrentDictionary.IsEmpty)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(5000));
+                    lock (_mutex)
+                    {
+                        Monitor.Wait(_mutex, 100);
+                    }
+
                     continue;
                 }
 
-                var first = _concurrentDictionary.First().Key;
-                _concurrentDictionary.TryRemove(first, out var msg);
-
-                if (msg == null)
+                if (!_concurrentDictionary.TryDequeue(out var msg) || msg == null)
                 {
                     continue;
                 }
-                
-                Console.WriteLine($"Doing msg with Id: {msg.Id}");
 
                 // Create a number to track where the prefix ends and the command begins
                 var pos = 0;
@@ -87,16 +95,25 @@ namespace MetalBot.Helpers
 
         public void EnqueueMessage(SocketUserMessage msg)
         {
-            _concurrentDictionary.AddOrUpdate(msg.Id, msg, (arg1, message) => message);
+            _concurrentDictionary.Enqueue(msg);
+            lock (_mutex)
+            {
+                Monitor.Pulse(_mutex);
+            }
         }
 
-        public void DequeueMessage(ulong id)
+        public void Dispose()
         {
-            if (_concurrentDictionary.ContainsKey(id))
+            _running = false;
+            foreach (var backgroundWorker in _backgroundWorkers)
             {
-                Console.WriteLine($"Removing msg with Id: {id}");
-                _concurrentDictionary.TryRemove(id, out _);
+                backgroundWorker.Dispose();
             }
+
+            _backgroundWorkers.Clear();
+            _client?.Dispose();
+            ((IDisposable) _commands)?.Dispose();
+            _loggingService?.Dispose();
         }
     }
 }

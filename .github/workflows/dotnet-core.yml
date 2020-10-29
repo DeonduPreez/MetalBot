@@ -29,5 +29,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
           name: MetalBot
-          path: /home/runner/work/MetalBot/MetalBot/bin/Release/netcoreapp3.1/publish/
+          path: /home/runner/work/MetalBot/MetalBot/bin/Release/netcoreapp3.1/
     
